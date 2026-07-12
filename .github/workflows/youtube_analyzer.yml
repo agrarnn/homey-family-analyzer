@@ -1,0 +1,55 @@
+name: YouTube Channel Analysis
+
+on:
+  schedule:
+    # Runs 4 times a day for scraping (7:00, 13:00, 19:00, 1:00 Thai Time -> 0:00, 6:00, 12:00, 18:00 UTC)
+    - cron: '0 0,6,12,18 * * *'
+    # Runs daily for reporting (9:00 Thai Time -> 2:00 UTC)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Run YouTube Analyzer
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: |
+          UTC_HOUR=$(date -u +%H)
+          echo "Current UTC Hour is $UTC_HOUR"
+          
+          # If it's the 9:00 AM Thai Time (2:00 AM UTC) run, or manually triggered, run both scrape and report.
+          # Otherwise (1:00, 7:00, 13:00, 19:00 Thai Time), run scrape only.
+          if [ "$UTC_HOUR" = "02" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Report Time! Running scrape and compiling daily report..."
+            python3 src/youtube_analyzer.py --mode scrape
+            python3 src/youtube_analyzer.py --mode report
+          else
+            echo "Scrape Time! Running channel metrics collection..."
+            python3 src/youtube_analyzer.py --mode scrape
+          fi
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add analysis_history.json daily_report.md
+          git commit -m "Update YouTube metrics and daily report [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }}
