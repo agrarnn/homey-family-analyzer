@@ -1,0 +1,37 @@
+name: YouTube Channel Scrape
+
+on:
+  schedule:
+    # Runs 4 times a day (7:00, 13:00, 19:00, 1:00 Thai Time -> 0:00, 6:00, 12:00, 18:00 UTC)
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Run YouTube Scraper
+        run: |
+          python3 src/youtube_analyzer.py --mode scrape
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add analysis_history.json
+          git commit -m "Update YouTube metrics history [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }}
