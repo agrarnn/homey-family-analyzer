@@ -213,13 +213,14 @@
     // Fetch data on load
     window.addEventListener('DOMContentLoaded', async () => {
       try {
+        const cacheBuster = `?t=${new Date().getTime()}`;
         // Fetch history json
-        const historyRes = await fetch('./analysis_history.json');
+        const historyRes = await fetch(`./analysis_history.json${cacheBuster}`);
         if (!historyRes.ok) throw new Error('Cannot load history data');
         globalHistoryData = await historyRes.json();
 
         // Fetch markdown report
-        const reportRes = await fetch('./daily_report.md');
+        const reportRes = await fetch(`./daily_report.md${cacheBuster}`);
         let reportText = '';
         if (reportRes.ok) {
           reportText = await reportRes.text();
