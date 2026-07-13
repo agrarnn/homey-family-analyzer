@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homey Family - YouTube Dashboard</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Sarabun', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background-color: #030014;
+      background-image: 
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+        radial-gradient(at 50% 0%, hsla(277,39%,10%,1) 0, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(225,39%,12%,0.8) 0, transparent 50%);
+      background-attachment: fixed;
+    }
+    .glass-card {
+      background: rgba(13, 10, 33, 0.45);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .glow-purple {
+      box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.2);
+    }
+  </style>
+</head>
+<body class="text-gray-100 font-sans min-h-screen pb-12">
+
+  <!-- Header Section -->
+  <header class="w-full max-w-6xl mx-auto px-4 pt-8 pb-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-800/60 pb-6">
+      <div>
+        <h1 class="text-3xl font-extrabold font-outfit tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400">
+          Homey Family Dashboard
+        </h1>
+        <p class="text-sm text-gray-400 mt-1">ระบบวิเคราะห์และติดตามสถานะความเติบโตทาง YouTube (อัปเดตอัตโนมัติ)</p>
+      </div>
+      <div class="flex items-center gap-2 text-xs bg-purple-950/30 border border-purple-500/20 text-purple-300 px-3 py-1.5 rounded-full backdrop-blur-md">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="last-update">กำลังดึงข้อมูล...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div id="loading" class="w-full max-w-md mx-auto mt-24 text-center">
+    <div class="inline-block w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+    <p class="text-purple-300 mt-4 font-outfit">กำลังโหลดข้อมูลแดชบอร์ดความขยับขยาย...</p>
+  </div>
+
+  <!-- Dashboard Content (Hidden initially) -->
+  <main id="main-content" class="w-full max-w-6xl mx-auto px-4 mt-6 hidden">
+    
+    <!-- KPI Summary Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <!-- Subscribers Card -->
+      <div class="glass-card glow-purple p-5 rounded-2xl">
+        <span class="text-xs text-gray-400 uppercase font-semibold">ผู้ติดตาม (Subscribers)</span>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span id="kpi-subs" class="text-3xl font-extrabold font-outfit text-white">-</span>
+          <span id="kpi-subs-trend" class="text-xs font-semibold px-2 py-0.5 rounded-full text-emerald-400 bg-emerald-950/30 hidden">
+            +0
+          </span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">เป้าหมายแรกสร้างรายได้: 500 ซับ</p>
+      </div>
+      
+      <!-- Video Count Card -->
+      <div class="glass-card p-5 rounded-2xl">
+        <span class="text-xs text-gray-400 uppercase font-semibold">จำนวนวิดีโอ (Videos)</span>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span id="kpi-videos" class="text-3xl font-extrabold font-outfit text-white">-</span>
+          <span id="kpi-videos-trend" class="text-xs font-semibold px-2 py-0.5 rounded-full text-purple-400 bg-purple-950/30 hidden">
+            +0
+          </span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">จำนวนวิดีโออัปโหลดทั้งหมด</p>
+      </div>
+
+      <!-- Recent Views Card -->
+      <div class="glass-card p-5 rounded-2xl">
+        <span class="text-xs text-gray-400 uppercase font-semibold">ยอดวิวสะสมวิดีโอล่าสุด</span>
+        <div class="mt-2">
+          <span id="kpi-views" class="text-xl font-extrabold font-outfit text-white block truncate">-</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">ผลรวมยอดวิวย้อนหลัง 4 คลิป</p>
+      </div>
+
+      <!-- Monetization Progress Card -->
+      <div class="glass-card p-5 rounded-2xl">
+        <span class="text-xs text-gray-400 uppercase font-semibold">ความคืบหน้าการสร้างรายได้</span>
+        <div class="mt-2">
+          <div class="flex justify-between text-xs font-semibold text-purple-300 mb-1">
+            <span id="kpi-progress-percent">0%</span>
+            <span>500 ซับ</span>
+          </div>
+          <div class="w-full bg-gray-900 rounded-full h-2">
+            <div id="kpi-progress-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">นับเฉพาะยอดผู้ติดตาม</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-gray-800/80 mb-6 overflow-x-auto whitespace-nowrap">
+      <button onclick="switchTab('report')" id="tab-report" class="px-6 py-3 font-semibold text-sm border-b-2 border-purple-500 text-purple-400 transition-all">
+        📑 รายงานวิเคราะห์ล่าสุด (AI Report)
+      </button>
+      <button onclick="switchTab('trends')" id="tab-trends" class="px-6 py-3 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition-all">
+        📈 แนวโน้มการเติบโต (Growth Trends)
+      </button>
+      <button onclick="switchTab('competitors')" id="tab-competitors" class="px-6 py-3 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition-all">
+        🏆 เปรียบเทียบกับคู่แข่ง (Competitors)
+      </button>
+    </div>
+
+    <!-- Tab Contents -->
+    
+    <!-- Tab 1: AI Report -->
+    <section id="content-report" class="tab-content block">
+      <div class="glass-card glow-purple p-6 md:p-8 rounded-3xl">
+        <div id="ai-report-body" class="prose prose-invert max-w-none text-gray-300 leading-relaxed">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Growth Trends -->
+    <section id="content-trends" class="tab-content hidden">
+      <div class="glass-card p-6 rounded-3xl">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-white font-outfit">แผนภูมิการเจริญเติบโตผู้ติดตาม</h3>
+            <p class="text-xs text-gray-400 mt-0.5">วิเคราะห์ยอดผู้ติดตามเปรียบเทียบในแต่ละช่วงเวลาสแกน</p>
+          </div>
+          <div class="flex bg-gray-950/80 border border-gray-800 rounded-xl p-1 text-xs">
+            <button onclick="setChartSource('homey')" id="btn-chart-homey" class="px-3 py-1.5 font-semibold rounded-lg bg-purple-600 text-white transition-all">
+              Homey Family
+            </button>
+            <button onclick="setChartSource('all')" id="btn-chart-all" class="px-3 py-1.5 font-semibold rounded-lg text-gray-400 hover:text-white transition-all">
+              ทุกช่องคู่แข่ง (หลักล้าน)
+            </button>
+          </div>
+        </div>
+        <div class="relative h-[300px] md:h-[400px]">
+          <canvas id="growthChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Competitors -->
+    <section id="content-competitors" class="tab-content hidden">
+      <div class="glass-card p-6 rounded-3xl overflow-hidden">
+        <h3 class="text-lg font-bold text-white font-outfit mb-4">ตารางเปรียบเทียบข้อมูลช่อง YouTube ล่าสุด</h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-800">
+            <thead class="bg-purple-950/15">
+              <tr>
+                <th class="px-6 py-3.5 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">ช่อง YouTube</th>
+                <th class="px-6 py-3.5 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">Handle</th>
+                <th class="px-6 py-3.5 text-right text-xs font-semibold text-purple-300 uppercase tracking-wider">ผู้ติดตาม (Subs)</th>
+                <th class="px-6 py-3.5 text-right text-xs font-semibold text-purple-300 uppercase tracking-wider">จำนวนคลิป</th>
+              </tr>
+            </thead>
+            <tbody id="competitors-table-body" class="divide-y divide-gray-900/60 bg-gray-950/10">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-8">
+          <h4 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">วิดีโอล่าสุดของแต่ละช่อง</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="recent-videos-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let globalHistoryData = [];
+    let currentChart = null;
+    let selectedChartSource = 'homey'; // 'homey' or 'all'
+
+    // Fetch data on load
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Fetch history json
+        const historyRes = await fetch('./analysis_history.json');
+        if (!historyRes.ok) throw new Error('Cannot load history data');
+        globalHistoryData = await historyRes.json();
+
+        // Fetch markdown report
+        const reportRes = await fetch('./daily_report.md');
+        let reportText = '';
+        if (reportRes.ok) {
+          reportText = await reportRes.text();
+        } else {
+          reportText = "# ไม่พบรายงานวิเคราะห์ล่าสุด\nกรุณารอสแกนและประมวลผลรอบถัดไป";
+        }
+
+        // Render Page
+        renderDashboard(globalHistoryData, reportText);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading').innerHTML = `
+          <div class="text-red-400 font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>
+          <p class="text-xs text-gray-400 mt-2">${err.message}</p>
+        `;
+      }
+    });
+
+    function renderDashboard(history, reportMd) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('hidden');
+
+      if (!history || history.length === 0) return;
+
+      const latestEntry = history[history.length - 1];
+      const prevEntry = history.length > 1 ? history[history.length - 2] : null;
+      const latestData = latestEntry.data;
+      const prevData = prevEntry ? prevEntry.data : null;
+
+      // Update Timestamp
+      const date = new Date(latestEntry.timestamp);
+      document.getElementById('last-update').innerText = `สแกนล่าสุด: ${date.toLocaleString('th-TH')}`;
+
+      // 1. KPI: Subscribers (Homey Family)
+      const homeyLatest = latestData.HomeyFamily || {};
+      const homeyPrev = prevData ? (prevData.HomeyFamily || {}) : {};
+      
+      const subsNum = parseInt(homeyLatest.subscribers) || 0;
+      document.getElementById('kpi-subs').innerText = subsNum.toLocaleString('th-TH') + ' คน';
+      
+      if (prevData) {
+        const diff = subsNum - (parseInt(homeyPrev.subscribers) || 0);
+        const diffTrend = document.getElementById('kpi-subs-trend');
+        diffTrend.innerText = diff >= 0 ? `+${diff}` : `${diff}`;
+        diffTrend.className = `text-xs font-semibold px-2 py-0.5 rounded-full ${diff >= 0 ? 'text-emerald-400 bg-emerald-950/30' : 'text-red-400 bg-red-950/30'}`;
+        diffTrend.classList.remove('hidden');
+      }
+
+      // 2. KPI: Videos (Homey Family)
+      const vidsNum = parseInt(homeyLatest.total_videos) || 0;
+      document.getElementById('kpi-videos').innerText = vidsNum.toLocaleString('th-TH') + ' คลิป';
+      if (prevData) {
+        const vDiff = vidsNum - (parseInt(homeyPrev.total_videos) || 0);
+        const vTrend = document.getElementById('kpi-videos-trend');
+        vTrend.innerText = `+${vDiff}`;
+        vTrend.classList.remove('hidden');
+      }
+
+      // 3. KPI: Recent Views (Sum of views of top videos)
+      let sumViews = 0;
+      if (homeyLatest.videos && homeyLatest.videos.length > 0) {
+        homeyLatest.videos.forEach(v => {
+          // Parse string views like "21 views" or "21 ครั้ง"
+          const viewsMatch = (v.views || '').match(/\d+/);
+          if (viewsMatch) {
+            sumViews += parseInt(viewsMatch[0]);
+          }
+        });
+      }
+      document.getElementById('kpi-views').innerText = sumViews.toLocaleString('th-TH') + ' ครั้ง';
+
+      // 4. KPI: Progress towards 500 subs
+      const progressPercent = Math.min(Math.round((subsNum / 500) * 100), 100);
+      document.getElementById('kpi-progress-percent').innerText = `${progressPercent}%`;
+      document.getElementById('kpi-progress-bar').style.width = `${progressPercent}%`;
+
+      // 5. Render AI Report Tab
+      document.getElementById('ai-report-body').innerHTML = parseMarkdown(reportMd);
+
+      // 6. Render Table Competitors
+      const tableBody = document.getElementById('competitors-table-body');
+      tableBody.innerHTML = '';
+      
+      const channelsOrder = ['HomeyFamily', 'KidsSongnamo', 'KidsMeSong', 'Kiddymelody'];
+      channelsOrder.forEach(key => {
+        const chan = latestData[key] || {};
+        const isSelf = key === 'HomeyFamily';
+        const row = document.createElement('tr');
+        row.className = isSelf ? 'bg-purple-950/10 font-bold border-l-4 border-purple-500' : 'hover:bg-purple-950/5';
+        
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-white flex items-center gap-2">
+            ${isSelf ? '🏠' : '🏆'} ${chan.channel_name || key}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+            ${chan.handle || '-'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-200">
+            ${chan.subscribers || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-200">
+            ${chan.total_videos || 'N/A'}
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      // 7. Render Recent Videos Cards
+      const videosGrid = document.getElementById('recent-videos-grid');
+      videosGrid.innerHTML = '';
+      
+      channelsOrder.forEach(key => {
+        const chan = latestData[key] || {};
+        if (!chan.videos || chan.videos.length === 0) return;
+        
+        const card = document.createElement('div');
+        card.className = 'glass-card p-5 rounded-2xl border border-gray-800/80';
+        
+        let vlistHtml = '';
+        chan.videos.slice(0, 3).forEach(v => {
+          vlistHtml += `
+            <div class="py-2 border-b border-gray-900/60 last:border-0">
+              <div class="text-sm font-semibold text-gray-200 line-clamp-1 hover:text-purple-400 transition-colors">
+                <a href="https://www.youtube.com/watch?v=${v.video_id}" target="_blank">${v.title}</a>
+              </div>
+              <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
+                <span>ยอดดู: ${v.views || 'N/A'}</span>
+                <span>อัปโหลดเมื่อ: ${v.published || 'N/A'}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <h4 class="text-sm font-bold text-purple-300 font-outfit mb-3 border-b border-gray-800 pb-1.5 flex justify-between">
+            <span>🎬 ${chan.channel_name || key}</span>
+            <span class="text-xs text-gray-500 font-normal">ล่าสุด 3 คลิป</span>
+          </h4>
+          <div class="flex flex-col gap-1">${vlistHtml}</div>
+        `;
+        videosGrid.appendChild(card);
+      });
+
+      // 8. Draw Initial Chart
+      drawChart();
+    }
+
+    // Tab Switcher
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`content-${tabName}`).classList.remove('hidden');
+
+      document.querySelectorAll('[id^="tab-"]').forEach(el => {
+        el.classList.remove('border-purple-500', 'text-purple-400');
+        el.classList.add('border-transparent', 'text-gray-400');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('border-purple-500', 'text-purple-400');
+      document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-gray-400');
+    }
+
+    // Toggle Chart Mode
+    function setChartSource(source) {
+      selectedChartSource = source;
+      
+      document.querySelectorAll('[id^="btn-chart-"]').forEach(el => {
+        el.classList.remove('bg-purple-600', 'text-white');
+        el.classList.add('text-gray-400', 'hover:text-white');
+      });
+      
+      const activeBtn = document.getElementById(`btn-chart-${source}`);
+      activeBtn.classList.add('bg-purple-600', 'text-white');
+      activeBtn.classList.remove('text-gray-400', 'hover:text-white');
+      
+      drawChart();
+    }
+
+    // Render Growth Trends Line Chart
+    function drawChart() {
+      if (currentChart) {
+        currentChart.destroy();
+      }
+
+      if (globalHistoryData.length === 0) return;
+
+      const ctx = document.getElementById('growthChart').getContext('2d');
+      
+      // Labels: Format timestamps into date readable labels
+      const labels = globalHistoryData.map(entry => {
+        const d = new Date(entry.timestamp);
+        return `${d.getDate()} ก.ค. ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      });
+
+      // Helper to parse subscribers string like "7.6M subscribers" or "17" to numbers
+      function parseSubCount(str) {
+        if (!str || str === 'N/A') return 0;
+        let val = parseFloat(str.replace(/[^0-9.]/g, ''));
+        if (str.includes('M')) {
+          val = val * 1000000;
+        } else if (str.includes('K')) {
+          val = val * 1000;
+        }
+        return val;
+      }
+
+      let datasets = [];
+
+      if (selectedChartSource === 'homey') {
+        // Line chart for Homey Family only (detailed local growth)
+        const homeyData = globalHistoryData.map(entry => {
+          const count = entry.data.HomeyFamily ? entry.data.HomeyFamily.subscribers : "0";
+          return parseSubCount(count);
+        });
+
+        datasets = [{
+          label: 'Homey Family (Subscribers)',
+          data: homeyData,
+          borderColor: '#a855f7',
+          backgroundColor: 'rgba(168, 85, 247, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 3
+        }];
+      } else {
+        // Line chart for competitors
+        const colors = {
+          'KidsSongnamo': '#f43f5e',
+          'KidsMeSong': '#3b82f6',
+          'Kiddymelody': '#10b981'
+        };
+
+        const keys = ['KidsSongnamo', 'KidsMeSong', 'Kiddymelody'];
+        datasets = keys.map(key => {
+          const dataPoints = globalHistoryData.map(entry => {
+            const count = entry.data[key] ? entry.data[key].subscribers : "0";
+            return parseSubCount(count);
+          });
+
+          return {
+            label: key,
+            data: dataPoints,
+            borderColor: colors[key],
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            borderWidth: 2
+          };
+        });
+      }
+
+      currentChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#9ca3af', font: { family: 'Sarabun' } }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#9ca3af', font: { family: 'Sarabun', size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { 
+                color: '#9ca3af', 
+                font: { family: 'Sarabun', size: 10 },
+                callback: function(value) {
+                  if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                  if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+                  return value;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Markdown Parser
+    function parseMarkdown(md) {
+      let html = md;
+      
+      // Clean headers
+      html = html.replace(/^# (.*?)$/gm, '<h1 class="text-xl md:text-2xl font-bold text-purple-400 mt-6 mb-4 font-outfit border-b border-gray-800 pb-2 flex items-center gap-2">✨ $1</h1>');
+      html = html.replace(/^## (.*?)$/gm, '<h2 class="text-base md:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mt-5 mb-3 font-outfit">$1</h2>');
+      html = html.replace(/^### (.*?)$/gm, '<h3 class="text-sm md:text-base font-semibold text-gray-200 mt-4 mb-2 font-outfit">$1</h3>');
+      
+      // Bold / Italic
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white bg-purple-500/10 px-1 rounded">$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em class="italic text-purple-200">$1</em>');
+      
+      // Lists
+      html = html.replace(/^\s*-\s+(.*?)$/gm, '<li class="ml-4 list-disc text-gray-300 mb-1 text-sm md:text-base">$1</li>');
+      
+      // Parse tables
+      const lines = html.split('\n');
+      let inTable = false;
+      let tableHtml = '';
+      const parsedLines = [];
+      
+      for (let line of lines) {
+        if (line.trim().startsWith('|')) {
+          if (line.includes('---')) continue;
+          const cells = line.split('|').slice(1, -1).map(c => c.trim());
+          if (!inTable) {
+            inTable = true;
+            tableHtml = '<div class="overflow-x-auto my-4 rounded-xl border border-gray-800/80 bg-gray-950/40 backdrop-blur-md"><table class="min-w-full divide-y divide-gray-900"><thead class="bg-purple-950/10">';
+            tableHtml += '<tr>' + cells.map(c => `<th class="px-4 py-3 text-left text-xs font-semibold text-purple-300 uppercase tracking-wider">${c}</th>`).join('') + '</tr></thead><tbody class="divide-y divide-gray-900/60">';
+          } else {
+            tableHtml += '<tr class="hover:bg-purple-950/5 transition-colors">' + cells.map(c => `<td class="px-4 py-3 text-xs md:text-sm text-gray-300">${c}</td>`).join('') + '</tr>';
+          }
+        } else {
+          if (inTable) {
+            inTable = false;
+            tableHtml += '</tbody></table></div>';
+            parsedLines.push(tableHtml);
+          }
+          parsedLines.push(line);
+        }
+      }
+      if (inTable) {
+        tableHtml += '</tbody></table></div>';
+        parsedLines.push(tableHtml);
+      }
+      
+      html = parsedLines.join('\n');
+      
+      // Paragraphs
+      html = html.replace(/\n\n/g, '</p><p class="text-gray-300 leading-relaxed mb-4 text-sm md:text-base">');
+      
+      return '<p class="text-gray-300 leading-relaxed mb-4 text-sm md:text-base">' + html + '</p>';
+    }
+  </script>
+</body>
+</html>
