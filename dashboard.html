@@ -138,6 +138,9 @@
       <button onclick="switchTab('competitors')" id="tab-competitors" class="px-6 py-3 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition-all">
         🏆 เปรียบเทียบกับคู่แข่ง (Competitors)
       </button>
+      <button onclick="switchTab('todo')" id="tab-todo" class="px-6 py-3 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition-all">
+        ✅ รายการสิ่งที่ต้องทำ (To-Do List)
+      </button>
     </div>
 
     <!-- Tab Contents -->
@@ -203,6 +206,43 @@
       </div>
     </section>
 
+    <!-- Tab 4: To-Do List -->
+    <section id="content-todo" class="tab-content hidden">
+      <div class="glass-card p-6 md:p-8 rounded-3xl">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-800 pb-4 mb-6">
+          <div>
+            <h3 class="text-xl font-bold text-white font-outfit">📝 รายการปรับปรุงช่องสร้างรายได้</h3>
+            <p class="text-xs text-gray-400 mt-1">ติ๊กเลือกหัวข้อที่ดำเนินการเสร็จสิ้นแล้วเพื่อบันทึกความคืบหน้า (บันทึกอัตโนมัติ)</p>
+          </div>
+          <button onclick="resetTodoProgress()" class="text-xs bg-red-950/40 border border-red-900/50 hover:bg-red-900/30 text-red-300 font-semibold px-3 py-1.5 rounded-xl transition-all">
+            ล้างความคืบหน้าทั้งหมด
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Daily Checklist -->
+          <div class="bg-gray-900/30 border border-gray-800/80 rounded-2xl p-5">
+            <h4 class="text-base font-bold text-purple-300 mb-4 flex items-center gap-2">
+              <span>⏰ สิ่งที่ต้องทำทุกวัน (Daily Checklist)</span>
+            </h4>
+            <div id="daily-todo-list" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Weekly Checklist -->
+          <div class="bg-gray-900/30 border border-gray-800/80 rounded-2xl p-5">
+            <h4 class="text-base font-bold text-pink-300 mb-4 flex items-center gap-2">
+              <span>📅 สิ่งที่ต้องทำทุกสัปดาห์ (Weekly Checklist)</span>
+            </h4>
+            <div id="weekly-todo-list" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <script>
@@ -230,6 +270,7 @@
 
         // Render Page
         renderDashboard(globalHistoryData, reportText);
+        renderTodoList();
       } catch (err) {
         console.error(err);
         document.getElementById('loading').innerHTML = `
@@ -379,6 +420,73 @@
       });
       document.getElementById(`tab-${tabName}`).classList.add('border-purple-500', 'text-purple-400');
       document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-gray-400');
+    }
+
+    // To-Do List Data & Logic
+    const todoItems = {
+      daily: [
+        { id: 'todo-d1', text: '📱 ตอบกลับคอมเมนต์ของผู้ชมในทุกวิดีโอทันทีเพื่อสร้างความสัมพันธ์และดันคะแนนอัลกอริทึม' },
+        { id: 'todo-d2', text: '📊 เปิดเช็กสถิติยอดรับชมย้อนหลังบนหน้าแดชบอร์ดนี้เพื่อเฝ้าระวังความผิดปกติ' },
+        { id: 'todo-d3', text: '🔍 สำรวจหน้าแรกของช่องคู่แข่งว่ามีการปล่อยคลิปใหม่หรือแต่งธีมเพลงแบบไหนบ้าง' }
+      ],
+      weekly: [
+        { id: 'todo-w1', text: '✍️ ปรับแก้ชื่อคลิป "ผักมีพลังวิเศษ" ในระบบ YouTube Studio ตามคำแนะนำ SEO (เพิ่มคำค้นหาหลัก)' },
+        { id: 'todo-w2', text: '✍️ ปรับแก้ชื่อคลิป "รู้ทันคนแปลกหน้า" และอัปเดตคำอธิบายวิดีโอ (Description)' },
+        { id: 'todo-w3', text: '✍️ ปรับแก้ชื่อคลิป "ช้าง ช้าง ช้าง" พร้อมจัดระเบียบลิงก์วิดีโอแนะนำช่วงท้ายคลิป' },
+        { id: 'todo-w4', text: '✍️ ปรับแก้ชื่อคลิป "จับปูดำ ขยำปูนา" เพื่อช่วยดึงกลุ่มคำค้นหาหลักของช่องเพลงเด็ก' },
+        { id: 'todo-w5', text: '📂 จัดทำเพลย์ลิสต์ (Playlist) รวมฮิตสัตว์แสนรัก และรวมเพลงเด็กยอดนิยมบนช่อง' },
+        { id: 'todo-w6', text: '🎶 วางแผนเตรียมนำไฟล์คลิปเดี่ยวเดิมมารวมกันทำคลิปยาว 10-15 นาที (Long Compilation)' },
+        { id: 'todo-w7', text: '📢 ตัดคลิปสั้น YouTube Shorts ความยาว 30-60 วินาที จากวิดีโอตัวเต็มเพื่อเพิ่มอัตราการเข้าถึง' }
+      ]
+    };
+
+    function renderTodoList() {
+      const dailyContainer = document.getElementById('daily-todo-list');
+      const weeklyContainer = document.getElementById('weekly-todo-list');
+      if (!dailyContainer || !weeklyContainer) return;
+      
+      dailyContainer.innerHTML = '';
+      weeklyContainer.innerHTML = '';
+      
+      // Render Daily
+      todoItems.daily.forEach(item => {
+        const isChecked = localStorage.getItem(item.id) === 'true';
+        const div = document.createElement('div');
+        div.className = `flex items-start gap-3 p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-purple-950/5 border-purple-500/20 text-gray-500 line-through' : 'bg-gray-950/20 border-gray-800 text-gray-200'}`;
+        div.innerHTML = `
+          <input type="checkbox" id="${item.id}" ${isChecked ? 'checked' : ''} onchange="toggleTodo('${item.id}')" class="mt-1 accent-purple-500 w-4 h-4 rounded cursor-pointer">
+          <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
+        `;
+        dailyContainer.appendChild(div);
+      });
+
+      // Render Weekly
+      todoItems.weekly.forEach(item => {
+        const isChecked = localStorage.getItem(item.id) === 'true';
+        const div = document.createElement('div');
+        div.className = `flex items-start gap-3 p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-pink-950/5 border-pink-500/20 text-gray-500 line-through' : 'bg-gray-950/20 border-gray-800 text-gray-200'}`;
+        div.innerHTML = `
+          <input type="checkbox" id="${item.id}" ${isChecked ? 'checked' : ''} onchange="toggleTodo('${item.id}')" class="mt-1 accent-pink-500 w-4 h-4 rounded cursor-pointer">
+          <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
+        `;
+        weeklyContainer.appendChild(div);
+      });
+    }
+
+    function toggleTodo(id) {
+      const checkbox = document.getElementById(id);
+      if (checkbox) {
+        localStorage.setItem(id, checkbox.checked);
+        renderTodoList();
+      }
+    }
+
+    function resetTodoProgress() {
+      if (confirm('คุณต้องการรีเซ็ตประวัติการทำงานทั้งหมดหรือไม่?')) {
+        todoItems.daily.forEach(item => localStorage.removeItem(item.id));
+        todoItems.weekly.forEach(item => localStorage.removeItem(item.id));
+        renderTodoList();
+      }
     }
 
     // Toggle Chart Mode
