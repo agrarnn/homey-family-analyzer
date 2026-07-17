@@ -271,122 +271,6 @@ def run_scrape():
     except Exception as e:
         print(f"Error saving history: {e}")
 
-def run_report():
-    print("Generating optimization report...")
-    if not os.path.exists(HISTORY_FILE):
-        print("No history file found. Running scrape first...")
-        run_scrape()
-        
-    try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            history = json.load(f)
-    except Exception as e:
-        print(f"Error loading history: {e}")
-        return
-        
-    if not history:
-        print("History is empty.")
-        return
-        
-    # Get current and previous data
-    current_entry = history[-1]
-    prev_entry = history[-2] if len(history) > 1 else None
-    
-    current_data = current_entry["data"]
-    timestamp = current_entry["timestamp"]
-    
-    # Prepare comparison summary for Gemini API
-    comparison_summary = {
-        "timestamp": timestamp,
-        "channels": {}
-    }
-    
-    for name in CHANNELS.keys():
-        curr = current_data.get(name, {})
-        prev = prev_entry["data"].get(name, {}) if prev_entry else {}
-        
-        # Calculate video growth or new uploads
-        new_videos = []
-        if prev.get("videos"):
-            prev_ids = {v["video_id"] for v in prev["videos"] if v.get("video_id")}
-            for v in curr.get("videos", []):
-                v_id = v.get("video_id")
-                if v_id and v_id not in prev_ids:
-                    new_videos.append(v)
-        
-        comparison_summary["channels"][name] = {
-            "channel_name": curr.get("channel_name", name),
-            "handle": curr.get("handle", ""),
-            "subscribers": curr.get("subscribers", "N/A"),
-            "prev_subscribers": prev.get("subscribers", "N/A"),
-            "total_videos": curr.get("total_videos", "N/A"),
-            "prev_total_videos": prev.get("total_videos", "N/A"),
-            "new_uploads_since_last_run": new_videos,
-            "recent_videos": curr.get("videos", [])[:10]  # send first 10 for context
-        }
-        
-    # Formulate Gemini Prompt
-    prompt = f"""
-คุณเป็นผู้เชี่ยวชาญด้านการเติบโตและการสร้างรายได้ของช่อง YouTube สำหรับเด็ก (YouTube Kids Channel Optimization Expert)
-วิเคราะห์ข้อมูลเปรียบเทียบช่องของพวกเรา 'HomeyFamily' กับช่องคู่แข่งที่ประสบความสำเร็จระดับหลักล้านผู้ติดตาม:
-- KidsSongnamo (7.6M+ ซับ)
-- KidsMeSong (7.3M+ ซับ)
-- Kiddymelody (1.2M+ ซับ)
-
-นี่คือข้อมูลดิบล่าสุดจากการสแกน ณ เวลา {timestamp}:
-{json.dumps(comparison_summary, indent=2, ensure_ascii=False)}
-
-จงวิเคราะห์เชิงเปรียบเทียบเพื่อหาคำแนะนำการพัฒนาช่อง Homey Family ของพวกเรา โดยแบ่งรายงานออกเป็นหัวข้อดังต่อไปนี้ในรูปแบบ Markdown (เขียนเป็นภาษาไทยอย่างเป็นทางการและดูเป็นมืออาชีพมากๆ):
-
-1. **ภาพรวมเปรียบเทียบสถานะช่อง (Channel Performance Comparison)**
-   - สรุปตัวเลขผู้ติดตามและยอดรวมวิดีโอของทุกช่องในรูปแบบตารางที่ดูสวยงามเปรียบเทียบกัน
-   - เน้นย้ำสถานะปัจจุบันของ Homey Family และระยะห่างที่จะต้องพิชิตเป้าหมายแรกคือ การเปิดสร้างรายได้ (500 ซับ/3,000 ชั่วโมงการรับชม หรือ 1,000 ซับ/4,000 ชั่วโมง)
-
-2. **ถอดสูตรคอนเทนต์คู่แข่ง (Competitor Content Strategy & Formats)**
-   - วิเคราะห์วิดีโอที่ได้รับความนิยมล่าสุดของคู่แข่ง: ความยาววิดีโอ (ทำคลิปยาว/รวมเพลง 10-20 นาที หรือเน้นคลิปเดี่ยวสั้นๆ 2-3 นาที)
-   - วิเคราะห์รูปแบบการเผยแพร่ เช่น ช่วงเวลาลงคลิป และความถี่ในการอัปโหลดของช่องคู่แข่ง
-
-3. **วิเคราะห์คำสำคัญและจิตวิทยาการตั้งชื่อคลิป (SEO Keywords & Metadata Analysis)**
-   - วิเคราะห์ว่าหัวข้อ/ชื่อคลิปและอิโมจิที่คู่แข่งเลือกใช้มีคำค้นหาหลักใดบ้าง (เช่น "เพลงเด็ก", "เพลงเด็กในตำนาน", ชื่อสัตว์, ชื่อผลไม้)
-   - แนะนำคำค้นหาที่ช่อง Homey Family ควรเพิ่มลงในชื่อคลิป (Title) และคำอธิบายคลิป (Description)
-
-4. **แผนการปรับปรุงแก้ไขอย่างละเอียดสำหรับ Homey Family (Actionable Optimization Plan)**
-   - ระบุวิดีโอปัจจุบันของ Homey Family ที่ต้องได้รับการแก้ไขทันที (เช่น เปลี่ยนชื่อคลิปให้ดึงดูดและทำ SEO ดีขึ้น)
-   - แนะนำแนวทางการสร้างวิดีโอถัดไปในโฟลเดอร์ Song และแนวทางของ Music Video Blueprint Board (เช่น ควรทำชุดรวมเพลงยาว หรือเน้นสอนทักษะชีวิตแบบไหน)
-
-เขียนรายงานด้วยความชัดเจน กระชับ ไม่เวิ่นเว้อ และเน้นจุดเด่นที่เป็นประโยชน์เชิงกลยุทธ์
-    """
-    
-    print("Calling Gemini API...")
-    ai_report = call_gemini_api(prompt)
-    
-    if not ai_report:
-        # Fallback report if API fails
-        print("API Call failed. Using fallback template.")
-        ai_report = f"""# รายงานการวิเคราะห์และแผนการปรับปรุงช่อง Homey Family
-*สร้างรายงานแบบแมนนวลเมื่อ {timestamp} (Gemini API ขัดข้อง)*
-
-## 1. ภาพรวมเปรียบเทียบสถานะช่อง
-| ช่อง YouTube | ผู้ติดตาม | จำนวนวิดีโอทั้งหมด |
-| --- | --- | --- |
-| **โฮมมี่ แฟมิลี่ (Homey Family)** | {current_data.get('HomeyFamily', {}).get('subscribers', 'N/A')} | {current_data.get('HomeyFamily', {}).get('total_videos', 'N/A')} |
-| **kids song (KidsSongnamo)** | {current_data.get('KidsSongnamo', {}).get('subscribers', 'N/A')} | {current_data.get('KidsSongnamo', {}).get('total_videos', 'N/A')} |
-| **KidsMeSong [เพลงเด็ก วิดีโอเด็ก]** | {current_data.get('KidsMeSong', {}).get('subscribers', 'N/A')} | {current_data.get('KidsMeSong', {}).get('total_videos', 'N/A')} |
-| **Kiddy Melody เพลงเด็กเจ้าตัวเล็ก** | {current_data.get('Kiddymelody', {}).get('subscribers', 'N/A')} | {current_data.get('Kiddymelody', {}).get('total_videos', 'N/A')} |
-
-## 2. คำแนะนำเร่งด่วนในการปรับปรุง SEO ชื่อคลิป
-- **ผักมีพลังวิเศษ**: ควรเปลี่ยนเป็น `ผักมีพลังวิเศษ | เพลงเด็ก 3D แสนสนุก กินผักร่างกายแข็งแรง | Homey Family`
-- **รู้ทันคนแปลกหน้า**: ควรเปลี่ยนเป็น `รู้ทันคนแปลกหน้า | เพลงเด็ก สอนความปลอดภัย เอาตัวรอดจากคนแปลกหน้า | Homey Family`
-- **ช้าง ช้าง ช้าง**: ควรเปลี่ยนเป็น `ช้าง ช้าง ช้าง | เพลงเด็กในตำนาน สุดน่ารัก เต้นสนุก | Homey Family`
-- **จับปูดำ ขยำปูนา**: ควรเปลี่ยนเป็น `จับปูดำ ขยำปูนา | เพลงเด็ก 3D เต้นสนุก เสริมพัฒนาการลูกน้อย | Homey Family`
-"""
-
-    # Add header and save report
-    full_report = f"""# รายงานวิเคราะห์และการปรับปรุงช่องประจำวัน ({datetime.now().strftime('%d/%m/%Y')})
-
-{ai_report}
-"""
-
 def send_to_line_bot(line_summary):
     access_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
     user_id = os.environ.get("LINE_USER_ID")
@@ -500,23 +384,26 @@ def run_report():
 
 จงวิเคราะห์เชิงเปรียบเทียบเพื่อหาคำแนะนำการพัฒนาช่อง Homey Family ของพวกเรา โดยแบ่งรายงานออกเป็นหัวข้อดังต่อไปนี้ในรูปแบบ Markdown (เขียนเป็นภาษาไทยอย่างเป็นทางการและดูเป็นมืออาชีพมากๆ):
 
+**ข้อกำหนดการเขียนรายงานอย่างเคร่งครัด (CRITICAL REQUIREMENT):**
+- ให้เขียนเนื้อหาในข้อ 2, 3, และ 4 เป็น **หัวข้อย่อยและจุดบุลเลท (Bullet Points) เท่านั้น** ห้ามเขียนอธิบายเป็นความย่อยยาวๆ หรือย่อหน้าหนาๆ โดยเด็ดขาด!
+- แต่ละบุลเลทต้องสั้น กระชับ มีความยาวไม่เกิน 1-2 บรรทัด อ่านแล้วเข้าใจง่ายทันที เพื่อให้สะดวกต่อการอ่านและย่อยข้อมูลผ่านหน้าจอมือถือ
+- เน้นเฉพาะข้อมูลเชิงลึกและคำแนะนำที่สามารถนำไปทำตามได้ทันที (Actionable Recommendations)
+
 1. **ภาพรวมเปรียบเทียบสถานะช่อง (Channel Performance Comparison)**
    - สรุปตัวเลขผู้ติดตามและยอดรวมวิดีโอของทุกช่องในรูปแบบตารางที่ดูสวยงามเปรียบเทียบกัน
    - เน้นย้ำสถานะปัจจุบันของ Homey Family และระยะห่างที่จะต้องพิชิตเป้าหมายแรกคือ การเปิดสร้างรายได้ (500 ซับ/3,000 ชั่วโมงการรับชม หรือ 1,000 ซับ/4,000 ชั่วโมง)
 
 2. **ถอดสูตรคอนเทนต์คู่แข่ง (Competitor Content Strategy & Formats)**
-   - วิเคราะห์วิดีโอที่ได้รับความนิยมล่าสุดของคู่แข่ง: ความยาววิดีโอ (ทำคลิปยาว/รวมเพลง 10-20 นาที หรือเน้นคลิปเดี่ยวสั้นๆ 2-3 นาที)
-   - วิเคราะห์รูปแบบการเผยแพร่ เช่น ช่วงเวลาลงคลิป และความถี่ในการอัปโหลดของช่องคู่แข่ง
+   - สรุปสั้นๆ เป็นบุลเลทเกี่ยวกับความยาววิดีโอที่ยอดนิยม (รวมเพลงยาว หรือคลิปเดี่ยวสั้น)
+   - สรุปสั้นๆ เป็นบุลเลทเกี่ยวกับช่วงเวลาลงคลิปและความถี่ในการลงคลิปของคู่แข่ง
 
 3. **วิเคราะห์คำสำคัญและจิตวิทยาการตั้งชื่อคลิป (SEO Keywords & Metadata Analysis)**
-   - วิเคราะห์ว่าหัวข้อ/ชื่อคลิปและอิโมจิที่คู่แข่งเลือกใช้มีคำค้นหาหลักใดบ้าง (เช่น "เพลงเด็ก", "เพลงเด็กในตำนาน", ชื่อสัตว์, ชื่อผลไม้)
-   - แนะนำคำค้นหาที่ช่อง Homey Family ควรเพิ่มลงในชื่อคลิป (Title) และคำอธิบายคลิป (Description)
+   - ลิสต์คีย์เวิร์ดยอดนิยมและอิโมจิที่คู่แข่งใช้ดึงดูดเด็ก
+   - แนะนำคำค้นหาหลักที่ช่อง Homey Family ควรเพิ่มในชื่อคลิปและคำอธิบาย
 
 4. **แผนการปรับปรุงแก้ไขอย่างละเอียดสำหรับ Homey Family (Actionable Optimization Plan)**
-   - ระบุวิดีโอปัจจุบันของ Homey Family ที่ต้องได้รับการแก้ไขทันที (เช่น เปลี่ยนชื่อคลิปให้ดึงดูดและทำ SEO ดีขึ้น)
-   - แนะนำแนวทางการสร้างวิดีโอถัดไปในโฟลเดอร์ Song และแนวทางของ Music Video Blueprint Board (เช่น ควรทำชุดรวมเพลงยาว หรือเน้นสอนทักษะชีวิตแบบไหน)
-
-เขียนรายงานด้วยความชัดเจน กระชับ ไม่เวิ่นเว้อ และเน้นจุดเด่นที่เป็นประโยชน์เชิงกลยุทธ์
+   - ชี้เป้าวิดีโอเดิมของ Homey Family ที่ต้องได้รับการแก้ไขเรื่อง SEO ทันที
+   - แนะนำแนวเพลงหรือสไตล์ MV สำหรับคลิปใหม่ถัดไปในอนาคต
 
 และสุดท้าย **คุณจะต้องสรุปข้อความสำหรับส่งเข้า LINE Notify ด้วย** โดยพิมพ์เครื่องหมายคั่น '===LINE_SUMMARY===' (เป็นบรรทัดใหม่) แล้วตามด้วยสรุปสั้นๆ (ความยาวไม่เกิน 800 ตัวอักษร) เพื่อให้อ่านในแอป LINE บนมือถือได้ง่ายและกระชับ โดยมีรูปแบบดังนี้:
 📢 **สรุปด่วนแผนพัฒนาช่อง Homey Family** ({datetime.now().strftime('%d/%m/%Y')})
