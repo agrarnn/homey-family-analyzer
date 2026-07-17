@@ -240,6 +240,17 @@
             </div>
           </div>
         </div>
+
+        <!-- Completed Tasks Section -->
+        <div id="completed-todo-section" class="mt-8 bg-gray-950/40 border border-purple-500/10 rounded-2xl p-5 hidden">
+          <h4 class="text-base font-bold text-green-400 mb-4 flex items-center justify-between">
+            <span>🎉 รายการที่ดำเนินการเสร็จสิ้นแล้ว (Completed Tasks)</span>
+            <span id="completed-count" class="text-xs bg-green-950/80 border border-green-500/30 text-green-300 px-2.5 py-1 rounded-full">0 ข้อ</span>
+          </h4>
+          <div id="completed-todo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
       </div>
     </section>
 
@@ -443,34 +454,83 @@
     function renderTodoList() {
       const dailyContainer = document.getElementById('daily-todo-list');
       const weeklyContainer = document.getElementById('weekly-todo-list');
-      if (!dailyContainer || !weeklyContainer) return;
+      const completedContainer = document.getElementById('completed-todo-list');
+      const completedSection = document.getElementById('completed-todo-section');
+      const completedCountLabel = document.getElementById('completed-count');
+      
+      if (!dailyContainer || !weeklyContainer || !completedContainer || !completedSection) return;
       
       dailyContainer.innerHTML = '';
       weeklyContainer.innerHTML = '';
+      completedContainer.innerHTML = '';
+      
+      let completedCount = 0;
       
       // Render Daily
       todoItems.daily.forEach(item => {
         const isChecked = localStorage.getItem(item.id) === 'true';
-        const div = document.createElement('div');
-        div.className = `flex items-start gap-3 p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-purple-950/5 border-purple-500/20 text-gray-500 line-through' : 'bg-gray-950/20 border-gray-800 text-gray-200'}`;
-        div.innerHTML = `
-          <input type="checkbox" id="${item.id}" ${isChecked ? 'checked' : ''} onchange="toggleTodo('${item.id}')" class="mt-1 accent-purple-500 w-4 h-4 rounded cursor-pointer">
-          <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
-        `;
-        dailyContainer.appendChild(div);
+        if (isChecked) {
+          completedCount++;
+          const div = document.createElement('div');
+          div.className = 'flex items-start gap-3 p-3.5 rounded-xl border bg-purple-950/5 border-purple-500/20 text-gray-500 line-through transition-all';
+          div.innerHTML = `
+            <input type="checkbox" id="${item.id}" checked onchange="toggleTodo('${item.id}')" class="mt-1 accent-purple-500 w-4 h-4 rounded cursor-pointer">
+            <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">
+              <span class="text-xs bg-purple-900/40 text-purple-300 px-1.5 py-0.5 rounded mr-1.5">รายวัน</span>${item.text}
+            </label>
+          `;
+          completedContainer.appendChild(div);
+        } else {
+          const div = document.createElement('div');
+          div.className = 'flex items-start gap-3 p-3.5 rounded-xl border bg-gray-950/20 border-gray-800 text-gray-200 hover:border-purple-500/40 transition-all';
+          div.innerHTML = `
+            <input type="checkbox" id="${item.id}" onchange="toggleTodo('${item.id}')" class="mt-1 accent-purple-500 w-4 h-4 rounded cursor-pointer">
+            <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
+          `;
+          dailyContainer.appendChild(div);
+        }
       });
 
       // Render Weekly
       todoItems.weekly.forEach(item => {
         const isChecked = localStorage.getItem(item.id) === 'true';
-        const div = document.createElement('div');
-        div.className = `flex items-start gap-3 p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-pink-950/5 border-pink-500/20 text-gray-500 line-through' : 'bg-gray-950/20 border-gray-800 text-gray-200'}`;
-        div.innerHTML = `
-          <input type="checkbox" id="${item.id}" ${isChecked ? 'checked' : ''} onchange="toggleTodo('${item.id}')" class="mt-1 accent-pink-500 w-4 h-4 rounded cursor-pointer">
-          <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
-        `;
-        weeklyContainer.appendChild(div);
+        if (isChecked) {
+          completedCount++;
+          const div = document.createElement('div');
+          div.className = 'flex items-start gap-3 p-3.5 rounded-xl border bg-pink-950/5 border-pink-500/20 text-gray-500 line-through transition-all';
+          div.innerHTML = `
+            <input type="checkbox" id="${item.id}" checked onchange="toggleTodo('${item.id}')" class="mt-1 accent-pink-500 w-4 h-4 rounded cursor-pointer">
+            <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">
+              <span class="text-xs bg-pink-900/40 text-pink-300 px-1.5 py-0.5 rounded mr-1.5">รายสัปดาห์</span>${item.text}
+            </label>
+          `;
+          completedContainer.appendChild(div);
+        } else {
+          const div = document.createElement('div');
+          div.className = 'flex items-start gap-3 p-3.5 rounded-xl border bg-gray-950/20 border-gray-800 text-gray-200 hover:border-pink-500/40 transition-all';
+          div.innerHTML = `
+            <input type="checkbox" id="${item.id}" onchange="toggleTodo('${item.id}')" class="mt-1 accent-pink-500 w-4 h-4 rounded cursor-pointer">
+            <label for="${item.id}" class="text-sm font-medium cursor-pointer leading-relaxed flex-1">${item.text}</label>
+          `;
+          weeklyContainer.appendChild(div);
+        }
       });
+
+      // Empty State Messages
+      if (dailyContainer.children.length === 0) {
+        dailyContainer.innerHTML = '<div class="text-xs text-gray-500 text-center py-6 font-semibold">🎉 เก่งมาก! ทำงานรายวันครบถ้วนแล้ว</div>';
+      }
+      if (weeklyContainer.children.length === 0) {
+        weeklyContainer.innerHTML = '<div class="text-xs text-gray-500 text-center py-6 font-semibold">🎉 สุดยอด! ปรับปรุงตามแผนงานสัปดาห์ครบถ้วนแล้ว</div>';
+      }
+
+      // Show/Hide Completed Section
+      if (completedCount > 0) {
+        completedSection.classList.remove('hidden');
+        completedCountLabel.textContent = `${completedCount} ข้อ`;
+      } else {
+        completedSection.classList.add('hidden');
+      }
     }
 
     function toggleTodo(id) {
