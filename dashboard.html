@@ -30,22 +30,78 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
+    :root {
+      --bg-color: #f8fafc;
+      --bg-gradient: radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.05) 0, transparent 55%), 
+                     radial-gradient(at 50% 0%, rgba(236, 72, 153, 0.04) 0, transparent 55%), 
+                     radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0, transparent 55%);
+      --card-bg: rgba(255, 255, 255, 0.75);
+      --card-border: rgba(168, 85, 247, 0.12);
+      --card-glow: 0 10px 30px -10px rgba(168, 85, 247, 0.06);
+      --text-main: #334155;
+      --text-sub: #64748b;
+      --title-color: #0f172a;
+      --border-color: rgba(226, 232, 240, 0.8);
+      --sub-card-bg: rgba(241, 245, 249, 0.6);
+      --btn-bg: rgba(241, 245, 249, 0.8);
+      --btn-border: rgba(226, 232, 240, 0.8);
+      --btn-hover-border: rgba(168, 85, 247, 0.4);
+    }
+
+    .dark {
+      --bg-color: #030014;
+      --bg-gradient: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                     radial-gradient(at 50% 0%, hsla(277,39%,10%,1) 0, transparent 50%), 
+                     radial-gradient(at 100% 0%, hsla(225,39%,12%,0.8) 0, transparent 50%);
+      --card-bg: rgba(13, 10, 33, 0.45);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --card-glow: 0 0 40px -10px rgba(168, 85, 247, 0.2);
+      --text-main: #cbd5e1;
+      --text-sub: #94a3b8;
+      --title-color: #ffffff;
+      --border-color: rgba(31, 41, 55, 0.6);
+      --sub-card-bg: rgba(3, 0, 20, 0.25);
+      --btn-bg: rgba(3, 0, 20, 0.2);
+      --btn-border: rgba(31, 41, 55, 0.6);
+      --btn-hover-border: rgba(168, 85, 247, 0.4);
+    }
+
     body {
-      background-color: #030014;
-      background-image: 
-        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-        radial-gradient(at 50% 0%, hsla(277,39%,10%,1) 0, transparent 50%), 
-        radial-gradient(at 100% 0%, hsla(225,39%,12%,0.8) 0, transparent 50%);
-      background-attachment: fixed;
+      background-color: var(--bg-color) !important;
+      background-image: var(--bg-gradient) !important;
+      background-attachment: fixed !important;
+      color: var(--text-main) !important;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
+    
     .glass-card {
-      background: rgba(13, 10, 33, 0.45);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--card-bg) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border: 1px solid var(--card-border) !important;
+      box-shadow: var(--card-glow) !important;
+      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
     }
-    .glow-purple {
-      box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.2);
+
+    /* CSS Overrides for Comfort & Reading Legibility */
+    .text-white, h1, h2, h3, h4, th {
+      color: var(--title-color) !important;
+    }
+    .text-gray-100, .text-gray-200, .text-gray-300 {
+      color: var(--text-main) !important;
+    }
+    .text-gray-400, .text-gray-500 {
+      color: var(--text-sub) !important;
+    }
+    .border-gray-800, .border-gray-800\/80, .border-gray-800\/60, .divide-gray-800, .divide-gray-900\/60 {
+      border-color: var(--border-color) !important;
+      divide-color: var(--border-color) !important;
+    }
+    .bg-gray-900\/30, .bg-gray-950\/40, .bg-gray-950\/80, .bg-gray-950\/10 {
+      background-color: var(--sub-card-bg) !important;
+    }
+    .hover\:text-white:hover {
+      color: var(--title-color) !important;
     }
   </style>
 </head>
@@ -55,14 +111,20 @@
   <header class="w-full max-w-6xl mx-auto px-4 pt-8 pb-4">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-800/60 pb-6">
       <div>
-        <h1 class="text-3xl font-extrabold font-outfit tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400">
+        <h1 class="text-3xl font-extrabold font-outfit tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400">
           Homey Family Dashboard
         </h1>
         <p class="text-sm text-gray-400 mt-1">ระบบวิเคราะห์และติดตามสถานะความเติบโตทาง YouTube (อัปเดตอัตโนมัติ)</p>
       </div>
-      <div class="flex items-center gap-2 text-xs bg-purple-950/30 border border-purple-500/20 text-purple-300 px-3 py-1.5 rounded-full backdrop-blur-md">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="last-update">กำลังดึงข้อมูล...</span>
+      <div class="flex items-center gap-3">
+        <!-- Theme Toggle Button -->
+        <button onclick="toggleTheme()" class="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/40 dark:bg-gray-950/20 hover:border-purple-500/40 text-gray-700 dark:text-gray-300 transition-all shadow-sm" title="เปลี่ยนโหมดสี">
+          <span id="theme-icon" class="text-base">☀️</span>
+        </button>
+        <div class="flex items-center gap-2 text-xs bg-purple-950/30 border border-purple-500/20 text-purple-300 px-3 py-1.5 rounded-full backdrop-blur-md">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="last-update">กำลังดึงข้อมูล...</span>
+        </div>
       </div>
     </div>
   </header>
@@ -261,8 +323,35 @@
     let currentChart = null;
     let selectedChartSource = 'homey'; // 'homey' or 'all'
 
+    // Theme Switcher Logic
+    function applyTheme(theme) {
+      const themeIcon = document.getElementById('theme-icon');
+      if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        if (themeIcon) themeIcon.textContent = '🌙';
+      } else {
+        document.documentElement.classList.add('dark');
+        if (themeIcon) themeIcon.textContent = '☀️';
+      }
+      if (currentChart) {
+        drawChart();
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const nextTheme = isDark ? 'light' : 'dark';
+      localStorage.setItem('theme', nextTheme);
+      applyTheme(nextTheme);
+    }
+
+    // Apply theme immediately
+    applyTheme(localStorage.getItem('theme') || 'light');
+
     // Fetch data on load
     window.addEventListener('DOMContentLoaded', async () => {
+      // Ensure theme is synced
+      applyTheme(localStorage.getItem('theme') || 'light');
       try {
         const cacheBuster = `?t=${new Date().getTime()}`;
         // Fetch history json
@@ -640,6 +729,10 @@
         });
       }
 
+      const isDark = document.documentElement.classList.contains('dark');
+      const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+      const tickColor = isDark ? '#9ca3af' : '#475569';
+
       currentChart = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
@@ -648,18 +741,18 @@
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              labels: { color: '#9ca3af', font: { family: 'Sarabun' } }
+              labels: { color: tickColor, font: { family: 'Sarabun' } }
             }
           },
           scales: {
             x: {
-              grid: { color: 'rgba(255,255,255,0.04)' },
-              ticks: { color: '#9ca3af', font: { family: 'Sarabun', size: 10 } }
+              grid: { color: gridColor },
+              ticks: { color: tickColor, font: { family: 'Sarabun', size: 10 } }
             },
             y: {
-              grid: { color: 'rgba(255,255,255,0.04)' },
+              grid: { color: gridColor },
               ticks: { 
-                color: '#9ca3af', 
+                color: tickColor, 
                 font: { family: 'Sarabun', size: 10 },
                 callback: function(value) {
                   if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
